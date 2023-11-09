@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Expenses Tracker</title>
+<!-- Bootstrap CSS -->
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+<!-- FontAwesome for icons -->
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.1/css/all.css">
+<style>
+  /* Additional custom styles if needed */
+</style>
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+  <h1 class="mb-4">Daily Expenses Tracker</h1>
+  <div class="row">
+    <div class="col-md-6">
+      <form id="expense-form" class="mb-3">
+        <div class="form-group">
+          <input type="text" id="item" class="form-control" placeholder="Item" required />
+        </div>
+        <div class="form-group">
+          <input type="number" id="amount" class="form-control" placeholder="Amount" required />
+        </div>
+        <div class="form-group">
+          <input type="date" id="date" class="form-control" placeholder="Date" required />
+        </div>
+        <div class="form-group">
+          <select id="category" class="form-control">
+            <option value="food">Food</option>
+            <option value="bills">Bills</option>
+            <option value="entertainment">Entertainment</option>
+            <!-- Add more categories as needed -->
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Expense</button>
+
+        <div class="form-group">
+          <label for="csvFileInput">Import expenses from CSV</label>
+          <input type="file" id="csvFileInput" class="form-control-file" accept=".csv">
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Table to display expenses -->
+  <table class="table table-striped mt-4">
+    <thead>
+      <tr>
+        <th scope="col" class="cursor-pointer" onclick="sortTable('date')">Date <i class="fas fa-sort" id="icon-date"></i></th>
+        <th scope="col" class="cursor-pointer" onclick="sortTable('item')">Item <i class="fas fa-sort" id="icon-item"></i></th>
+        <th scope="col" class="cursor-pointer" onclick="sortTable('amount')">Amount <i class="fas fa-sort" id="icon-amount"></i></th>
+        <th scope="col" class="cursor-pointer" onclick="sortTable('category')">Category <i class="fas fa-sort" id="icon-category"></i></th>
+      </tr>
+    </thead>
+    <tbody id="expenses-table-body">
+      <!-- Expenses will be listed here -->
+    </tbody>
+  </table>
+</div>
+
+<!-- Bootstrap JS, Popper.js, and jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    const expenseForm = document.getElementById('expense-form');
+    const expensesList = document.getElementById('expenses-list');
+    const expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+
+    let currentSortColumn = null;
+    let sortAscending = true;
+
+    function sortTable(column) {
+      if (currentSortColumn === column) {
+        sortAscending = !sortAscending;
+      } else {
+        currentSortColumn = column;
+        sortAscending = true;
+      }
+
+      expenses.sort((a, b) => {
+        if (a[column] < b[column]) {
+          return sortAscending ? -1 : 1;
+        }
+        if (a[column] > b[column]) {
+          return sortAscending ? 1 : -1;
+        }
+        return 0;
+      });
+
+      // Update sort icons
+      ['date', 'item', 'amount', 'category'].forEach(col => {
+        document.getElementById(`icon-${col}`).className = 'fas fa-sort'; // reset all icons
+      });
+
+      const classAscending = 'fas fa-sort-up';
+      const classDescending = 'fas fa-sort-down';
+      const classToAdd = sortAscending ? classAscending : classDescending;
+
+      // Set the icon for the current sorted column
+      document.getElementById(`icon-${column}`).className = classToAdd;
+
+      renderExpenses();
+    }
+
+    function renderExpenses() {
+      const tableBody = document.getElementById('expenses-table-body');
+      tableBody.innerHTML = '';
+      expenses.forEach(expense => {
+        const row = tableBody.insertRow();
+        row.insertCell(0).innerText = expense.date;
+        row.insertCell(1).innerText = expense.item;
+        row.insertCell(2).innerText = `$${expense.amount}`;
+        row.insertCell(3).innerText = expense.category;
+      });
+    }
+
+    expenseForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const item = document.getElementById('item').value;
+      const amount = document.getElementById('amount').value;
+      const date = document.getElementById('date').value;
+      const category = document.getElementById('category').value;
+
+      const expense = { item, amount, date, category };
+      expenses.push(expense);
+      localStorage.setItem('expenses', JSON.stringify(expenses));
+      
+      renderExpenses(); // Update the list
+
+      // Reset the form
+      expenseForm.reset();
+    });
+
+    document.getElementById('csvFileInput').addEventListener('change', function(e) {
+      const fileReader = new FileReader();
+      fileReader.onload = function(event) {
+        // Parse the CSV file
+        const text = event.target.result;
+        const rows = text.split('\n').slice(1); // Skip header row
+
+        rows.forEach(row => {
+          const cols = row.split(',');
+          if(cols.length === 4) { // Make sure row has correct number of columns
+            const [date, item, amount, category] = cols;
+            const expense = { date, item, amount: parseFloat(amount), category };
+            expenses.push(expense);
+          }
+        });
+
+        localStorage.setItem('expenses', JSON.stringify(expenses));
+        renderExpenses(); // Update the list
+      };
+
+      // Read the CSV file as text
+      fileReader.readAsText(e.target.files[0]);
+    });
+
+    renderExpenses(); // Initial rendering of the list
+</script>
+
+</body>
+</html>
